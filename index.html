@@ -13,7 +13,7 @@
         
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            background: linear-gradient(to bottom, #8B0000 0%, #000000 100%);
             min-height: 100vh;
             display: flex;
             justify-content: center;
@@ -78,7 +78,7 @@
         }
         
         .result-display {
-            background: #f8f9fa;
+            background: #000000;
             padding: 20px;
             border-radius: 10px;
             margin-bottom: 30px;
@@ -93,14 +93,14 @@
         }
         
         .result-description {
-            color: #555;
+            color: #cccccc;
             margin-bottom: 10px;
             font-size: 16px;
             font-style: italic;
         }
         
         .result-effect {
-            color: #333;
+            color: #ffffff;
             font-size: 16px;
             line-height: 1.5;
         }
@@ -187,14 +187,14 @@
             oscillator.connect(gainNode);
             gainNode.connect(audioContext.destination);
             
-            oscillator.frequency.value = 800;
-            oscillator.type = 'sine';
+            oscillator.frequency.value = 1200;
+            oscillator.type = 'square';
             
-            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.05);
+            gainNode.gain.setValueAtTime(0.15, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.03);
             
             oscillator.start(audioContext.currentTime);
-            oscillator.stop(audioContext.currentTime + 0.05);
+            oscillator.stop(audioContext.currentTime + 0.03);
         }
 
         // Critical Hit and Fumble tables
@@ -217,10 +217,10 @@
                 { min: 85, max: 89, description: "You strike with great force.", effect: "Roll an additional set of damage dice above and beyond your normal critical roll." },
                 { min: 90, max: 94, description: "You strike with extreme force.", effect: "Roll an additional set of damage dice above and beyond your normal critical roll, and the target suffers one unit of exhaustion." },
                 { min: 95, max: 99, description: "You strike with debilitating force.", effect: "Roll an additional set of damage dice above and beyond your normal critical roll. The target suffers a permanent injury (chosen by DM). It can be healed with extended rest of a length determined by the DM, but leaves a scar." },
-                { min: 100, max: 100, description: "You strike with devastating force.", effect: "Roll an additional set of damage dice above and beyond your normal critical roll; the target suffers 1 unit of exhaustion and gets a permanent injury (chosen by DM). The permanent injury can be healed with extended rest." }
+                { min: 100, max: 100, description: "You strike with devastating force.", effect: "Your target gets a permanent injury (chosen by DM)." }
             ],
             weaponFumble: [
-                { min: 1, max: 1, description: "You are embarassed, but nothing remarkable happens.", effect: "You miss your attack." },
+                { min: 1, max: 1, description: "You are embarassed, you literally shit yourself.", effect: "You miss your attack." },
                 { min: 2, max: 5, description: "You lose your combat footing, exposing yourself to your target.", effect: "Your target has advantage on their first attack roll against you next round." },
                 { min: 6, max: 9, description: "You lose your combat footing, exposing yourself to your enemies.", effect: "Your enemies have advantage on their first attack roll against you next round." },
                 { min: 10, max: 14, description: "You lose your combat footing, and have difficulty recovering.", effect: "Your enemies have advantage on their attack rolls against you until the end of your next turn." },
@@ -257,7 +257,7 @@
                 { min: 100, max: 100, description: "Your spell strikes with devastating force.", effect: "Roll an additional set of spell damage dice above and beyond your normal critical roll. The target suffers 1 unit of exhaustion and gets a permanent injury (chosen by DM). The permanent injury can be healed with extended rest." }
             ],
             spellFumble: [
-                { min: 1, max: 1, description: "You are embarassed, but nothing remarkable happens.", effect: "You miss your attack." },
+                { min: 1, max: 1, description: "Dark energy intrudes. You shit yourself.", effect: "You miss your attack." },
                 { min: 2, max: 5, description: "You get wrapped up in your casting and forget to watch your target.", effect: "Your target has advantage on their first attack roll against you next round." },
                 { min: 6, max: 9, description: "You get wrapped up in your casting and forget to watch around you.", effect: "All enemies have advantage on their first attack roll against you next round." },
                 { min: 10, max: 14, description: "You are so wrapped up in your casting that you forget you are fighting a battle.", effect: "All enemies have advantage on their attack rolls against you until the end of your next turn." },
@@ -311,7 +311,7 @@
             // Rolling animation - fast at first, then slowing down
             let counter = 0;
             let currentNum = Math.floor(Math.random() * 100) + 1;
-            const intervals = [30, 40, 50, 70, 100, 150, 200, 300];
+            const intervals = [20, 25, 30, 40, 50, 70, 90, 120, 160, 220, 300, 400];
             let intervalIndex = 0;
             
             function rollNumber() {
@@ -321,14 +321,15 @@
                 playClick();
                 
                 // Gradually slow down
-                if (counter < 50) {
+                if (counter < 70) {
                     setTimeout(rollNumber, intervals[Math.min(intervalIndex, intervals.length - 1)]);
-                    if (counter % 6 === 0) intervalIndex++;
+                    if (counter % 5 === 0) intervalIndex++;
                 } else {
                     // Final reveal
                     setTimeout(() => {
                         numberDisplay.style.transform = 'scale(1.2)';
                         numberDisplay.textContent = finalNum;
+                        playClick();
                         
                         setTimeout(() => {
                             numberDisplay.style.transform = 'scale(1)';
