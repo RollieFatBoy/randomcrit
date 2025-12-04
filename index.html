@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>D&D Critical Hit/Fumble Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px 30px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+        
+        .type-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 30px;
+        }
+        
+        .type-btn {
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #666;
+            background: #f0f0f0;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .type-btn.active {
+            color: white;
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            border-color: #c0392b;
+        }
+        
+        .number-display {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            color: white;
+            font-size: 72px;
+            font-weight: bold;
+            text-align: center;
+            padding: 40px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            min-height: 160px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .result-display {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            min-height: 120px;
+        }
+        
+        .result-title {
+            font-weight: bold;
+            color: #e74c3c;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        
+        .result-description {
+            color: #555;
+            margin-bottom: 10px;
+            font-size: 16px;
+            font-style: italic;
+        }
+        
+        .result-effect {
+            color: #333;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+        
+        button.generate-btn {
+            width: 100%;
+            padding: 18px;
+            font-size: 18px;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        
+        button.generate-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(231, 76, 60, 0.4);
+        }
+        
+        button.generate-btn:active {
+            transform: translateY(0);
+        }
+        
+        button.generate-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 30px 20px;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+            
+            .number-display {
+                font-size: 60px;
+                padding: 30px;
+            }
+            
+            .result-title {
+                font-size: 16px;
+            }
+            
+            .result-description, .result-effect {
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Critical Hit/Fumble Generator</h1>
+        
+        <div class="type-selector">
+            <button class="type-btn active" onclick="setType('weaponHit')">Weapon Hit</button>
+            <button class="type-btn" onclick="setType('weaponFumble')">Weapon Fumble</button>
+            <button class="type-btn" onclick="setType('spellHit')">Spell Hit</button>
+            <button class="type-btn" onclick="setType('spellFumble')">Spell Fumble</button>
+        </div>
+        
+        <div class="number-display" id="numberDisplay">?</div>
+        
+        <div class="result-display" id="resultDisplay">
+            <div class="result-title">Select a type and click Roll!</div>
+        </div>
+        
+        <button class="generate-btn" onclick="generateNumber()">Roll d100</button>
+    </div>
+
+    <script>
+        // Create audio context for click sound
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playClick() {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.value = 800;
+            oscillator.type = 'sine';
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.05);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.05);
+        }
+
+        // Critical Hit and Fumble tables
+        const tables = {
+            weaponHit: [
+                { min: 1, max: 1, description: "You feel accomplished, but nothing remarkable happens.", effect: "Regular critical hit." },
+                { min: 2, max: 5, description: "You feel it is imperative to press the advantage no matter the cost.", effect: "You can choose to gain advantage on all attacks against your target until the end of your next turn, but if you do, all enemies have advantage on their attack rolls against you until the end of your next turn." },
+                { min: 6, max: 9, description: "You feel it is imperative to press the advantage, but remain aware.", effect: "You can choose to gain advantage on all attacks against your target next turn, but your target will have the same against you until the end of your next turn." },
+                { min: 10, max: 14, description: "You know how to gain advantage.", effect: "You gain advantage on all attacks on your target until the end of your next turn." },
+                { min: 15, max: 19, description: "As you are fighting, you notice an effective route to escape danger.", effect: "You are able to use the disengage action after your attack." },
+                { min: 20, max: 24, description: "You feel the flow of the battle and know where to make your next move.", effect: "After your turn you move to the top of the initiative order." },
+                { min: 25, max: 29, description: "You begin to recognize patterns in your opponent's fighting technique.", effect: "You gain +2 to your AC against your target, and advantage on all savings throws from effects originating from your target until your next turn." },
+                { min: 30, max: 39, description: "You are able to move towards your target while attacking and can attempt to harass them.", effect: "After your attack you can choose to attempt to grapple your opponent if you have a free hand, or attempt to shove your opponent if both hands are in use." },
+                { min: 40, max: 49, description: "You are able to move towards your target while attacking to harass them.", effect: "After your attack you can choose to automatically succeed in grappling your opponent if you have a free hand, or shove your target if both hands are in use." },
+                { min: 50, max: 59, description: "You attempt to disarm your target.", effect: "You are able to take the disarm action after your attack." },
+                { min: 60, max: 69, description: "You kick your target's weapon out of their hands.", effect: "You are able to take the disarm action after your attack and steal your target's weapon if you have a free hand. Otherwise, it's knocked up to 20 feet away." },
+                { min: 70, max: 74, description: "Your senses heighten and you become aware of threats around you.", effect: "You are able to use the dodge action after your attack." },
+                { min: 75, max: 79, description: "Your attack knocks your target over.", effect: "Your target is knocked prone." },
+                { min: 80, max: 84, description: "Your strike surprises your opponent.", effect: "Your target is surprised until the end of their next turn." },
+                { min: 85, max: 89, description: "You strike with great force.", effect: "Roll an additional set of damage dice above and beyond your normal critical roll." },
+                { min: 90, max: 94, description: "You strike with extreme force.", effect: "Roll an additional set of damage dice above and beyond your normal critical roll, and the target suffers one unit of exhaustion." },
+                { min: 95, max: 99, description: "You strike with debilitating force.", effect: "Roll an additional set of damage dice above and beyond your normal critical roll. The target suffers a permanent injury (chosen by DM). It can be healed with extended rest of a length determined by the DM, but leaves a scar." },
+                { min: 100, max: 100, description: "You strike with devastating force.", effect: "Roll an additional set of damage dice above and beyond your normal critical roll; the target suffers 1 unit of exhaustion and gets a permanent injury (chosen by DM). The permanent injury can be healed with extended rest." }
+            ],
+            weaponFumble: [
+                { min: 1, max: 1, description: "You are embarassed, but nothing remarkable happens.", effect: "You miss your attack." },
+                { min: 2, max: 5, description: "You lose your combat footing, exposing yourself to your target.", effect: "Your target has advantage on their first attack roll against you next round." },
+                { min: 6, max: 9, description: "You lose your combat footing, exposing yourself to your enemies.", effect: "Your enemies have advantage on their first attack roll against you next round." },
+                { min: 10, max: 14, description: "You lose your combat footing, and have difficulty recovering.", effect: "Your enemies have advantage on their attack rolls against you until the end of your next turn." },
+                { min: 15, max: 19, description: "Melee: You get tangled with your enemy and fall over. Ranged: You spill your quiver.", effect: "Melee: You are knocked prone and your movement is reduced to 0. Your target must succeed a DC 10 dexterity check or they are also knocked prone. Ranged: You must pick up arrows individually from the ground using your 'environmental interaction', or the 'Use an Object' action to nock your bow." },
+                { min: 20, max: 29, description: "You lose your balance.", effect: "You fall prone and your movement is reduced to 0." },
+                { min: 30, max: 39, description: "As you attack your opponent you begin to fear that they are the superior combatant.", effect: "Disadvantage on your next attack roll against your target." },
+                { min: 40, max: 49, description: "You miss an attack and gaze upon the chaos of the battle, causing your confidence to falter.", effect: "Disadvantage on your next attack roll against any target." },
+                { min: 50, max: 59, description: "You lose your grip as you attack.", effect: "Roll a DC 10 Dexterity Check, on failure you drop your weapon at your feet." },
+                { min: 60, max: 69, description: "Melee: The weapon slips from your hand as you attack. Ranged: Your ammo gets lodged in its container.", effect: "Melee: Roll a DC 10 Dex Check; on failure you throw your weapon into your enemy's space. Ranged: You must use an action to organize the ammunition in its case before you can make another ranged attack." },
+                { min: 70, max: 79, description: "Melee: You lunge past your target, exposing yourself. Ranged: Your attack startles your allies near your target.", effect: "Melee: Enemy you were attacking is able to use their reaction to perform and attack of opportunity. Ranged: the target can perform an opportunity attack on any ally within melee range." },
+                { min: 80, max: 84, description: "Missing what you thought was a critical blow causes you to panic.", effect: "End your current turn and you are surprised until the end of your next turn." },
+                { min: 85, max: 89, description: "You attack wildly and lose track of the fight around you.", effect: "End your turn and move to the bottom of the initiative order at the start of the next round." },
+                { min: 90, max: 94, description: "You lose your footing while attacking and fall to the ground bumping your head.", effect: "You fall prone. Roll a DC 10 constitution save, on failure you take 1d6 damage and are knocked unconscious for 1 minute or until you receive damage from any source. On success take half damage and you remain conscious." },
+                { min: 95, max: 99, description: "You lose your footing while attacking and fall head first.", effect: "You fall prone. Roll a DC 15 constitution save, on failure you take 2d6 damage and are knocked unconscious for 1 minute or until you receive damage from any source. On success take half damage and you remain conscious." },
+                { min: 100, max: 100, description: "You lose your footing while attacking and slam your head into the ground.", effect: "You fall prone, take 3d6 damage, and become unconscious for 1 minute or until you receive damage from any source." }
+            ],
+            spellHit: [
+                { min: 1, max: 1, description: "You feel accomplished, but nothing remarkable happens.", effect: "Regular spell critical hit." },
+                { min: 2, max: 5, description: "You feel it is imperative to press the advantage no matter the cost.", effect: "You can choose to gain advantage on your next attack roll against your target, but all enemies have advantage on their attack rolls against you until the end of your next turn." },
+                { min: 6, max: 9, description: "You feel it is imperative to press the advantage, but maintain awareness of your surroundings.", effect: "You can choose to gain advantage on your next attack roll against your target, your target has advantage on their attack rolls against you until the end of your next turn." },
+                { min: 10, max: 14, description: "As you are fighting, you notice an effective route to escape danger.", effect: "You are able to use the disengage action after your attack." },
+                { min: 15, max: 19, description: "You feel flow of the battle and know where to make your next move.", effect: "After your turn you move to the top of the initiative order." },
+                { min: 20, max: 29, description: "Your spell cripples your opponent.", effect: "Your target's movement speed is cut in half for their next 2 turns." },
+                { min: 30, max: 39, description: "Your spell knocks your target over.", effect: "Your target is knocked prone." },
+                { min: 40, max: 49, description: "The light from your spell flashes near your target's eyes.", effect: "Your target is blinded until the end of their next turn." },
+                { min: 50, max: 59, description: "You blast the target's weapon out of their hands.", effect: "Your target's weapon is flung 1d6*5 feet away in a random direction." },
+                { min: 60, max: 69, description: "The sight of your magic fills the target's heart with fear.", effect: "Your target is frightened by you until you stop casting magic. You are able to discern the source of your target's fear." },
+                { min: 70, max: 74, description: "The force from your spell stuns your opponent.", effect: "Your target is incapacitated until the end of their next turn." },
+                { min: 75, max: 79, description: "Your spell is incidentally infused with fey energy.", effect: "Roll 10d8. If your targets current health is lower than the number rolled they fall asleep for 1 minute." },
+                { min: 80, max: 84, description: "Your spells strike surprises your opponent.", effect: "Your target is surprised until the end of their next turn." },
+                { min: 85, max: 89, description: "Your spell strikes with great force.", effect: "Roll an additional set of spell damage dice above and beyond your normal critical roll." },
+                { min: 90, max: 94, description: "Your spell strikes with extreme force.", effect: "Roll an additional set of spell damage dice above and beyond your normal critical roll, and the target suffers one unit of exhaustion." },
+                { min: 95, max: 99, description: "Your spell strikes with debilitating force.", effect: "Roll an additional set of spell damage dice above and beyond your normal critical roll and the target suffers a permanent injury (chosen by DM). It can be healed with extended rest of a length determined by the DM, but leaves a scar." },
+                { min: 100, max: 100, description: "Your spell strikes with devastating force.", effect: "Roll an additional set of spell damage dice above and beyond your normal critical roll. The target suffers 1 unit of exhaustion and gets a permanent injury (chosen by DM). The permanent injury can be healed with extended rest." }
+            ],
+            spellFumble: [
+                { min: 1, max: 1, description: "You are embarassed, but nothing remarkable happens.", effect: "You miss your attack." },
+                { min: 2, max: 5, description: "You get wrapped up in your casting and forget to watch your target.", effect: "Your target has advantage on their first attack roll against you next round." },
+                { min: 6, max: 9, description: "You get wrapped up in your casting and forget to watch around you.", effect: "All enemies have advantage on their first attack roll against you next round." },
+                { min: 10, max: 14, description: "You are so wrapped up in your casting that you forget you are fighting a battle.", effect: "All enemies have advantage on their attack rolls against you until the end of your next turn." },
+                { min: 15, max: 19, description: "Your spell creates a large plume of smoke obscuring your location.", effect: "The area in a 5 foot radius around your location becomes heavily obscured for 1 minute. A strong breeze can blow away the smoke in 1 round." },
+                { min: 20, max: 29, description: "You misfire and get knocked over.", effect: "You are knocked prone." },
+                { min: 30, max: 39, description: "The spell fires in an unexpected manner, causing your confidence in your abilities to falter.", effect: "You have disadvantage on any spell attacks, and enemies have advantage against your spell savings throws until the end of your next turn." },
+                { min: 40, max: 49, description: "The placement of your spell startles your allies near your target, causing them to drop their guard.", effect: "Your target is able to use their reaction to take an attack of opportunity on one of your allies in melee range." },
+                { min: 50, max: 59, description: "You scramble the contents of your component pouch or your focus becomes overloaded with energy.", effect: "You are unable to perform material components to cast spells until the end of your next turn." },
+                { min: 60, max: 69, description: "Your arm cramps as you cast.", effect: "You are unable to perform somatic components to cast spells until the end of your next turn." },
+                { min: 70, max: 79, description: "You bite your tongue as you cast.", effect: "You are unable to use verbal components to cast spells until the end of your next turn." },
+                { min: 80, max: 84, description: "Your spell misfires and dazes you, causing you to lose track of the fight.", effect: "End your turn and move to the bottom of the initiative order at the start of the next round." },
+                { min: 85, max: 89, description: "You misfire and panic.", effect: "End your current turn and you are surprised until the end of your next turn." },
+                { min: 90, max: 94, description: "Your spell backfires and causes you to fall and bump your head.", effect: "You fall prone. Roll a DC 10 Con save; on failure you take 1d6 bludeoning damage and are knocked unconscious for 1 minute or until you receive damage from any source. On success take half damage and you remain conscious." },
+                { min: 95, max: 99, description: "Your spell backfires, creating an explosion and causing you to fall and bump your head.", effect: "You fall prone. Roll a DC 15 Con save; on failure you take 1d6 bludgeoning damage, 1d6 thunder damage, and are knocked unconscious for 1 minute or until you receive damage from any source. On success take half damage and you remain conscious." },
+                { min: 100, max: 100, description: "Your spell totally backfires, creating a large explosion and causing you to fall and bump your head.", effect: "You hit yourself with your spell. If the spell effect is instant you take the full effect and if the spell requires concentration the effect persists until the end of your next turn. You also take damage as above." }
+            ]
+        };
+
+        let currentType = 'weaponHit';
+        let isGenerating = false;
+
+        function setType(type) {
+            currentType = type;
+            
+            // Update button states
+            document.querySelectorAll('.type-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            // Reset display
+            document.getElementById('numberDisplay').textContent = '?';
+            document.getElementById('resultDisplay').innerHTML = '<div class="result-title">Click Roll to generate!</div>';
+        }
+
+        function generateNumber() {
+            if (isGenerating) return;
+            isGenerating = true;
+            
+            // Generate final random number between 1 and 100
+            const finalNum = Math.floor(Math.random() * 100) + 1;
+            
+            const numberDisplay = document.getElementById('numberDisplay');
+            const resultDisplay = document.getElementById('resultDisplay');
+            const button = document.querySelector('.generate-btn');
+            
+            // Disable button and clear result
+            button.disabled = true;
+            resultDisplay.innerHTML = '<div class="result-title">Rolling...</div>';
+            
+            // Rolling animation - fast at first, then slowing down
+            let counter = 0;
+            let currentNum = Math.floor(Math.random() * 100) + 1;
+            const intervals = [30, 40, 50, 70, 100, 150, 200, 300];
+            let intervalIndex = 0;
+            
+            function rollNumber() {
+                counter++;
+                currentNum = Math.floor(Math.random() * 100) + 1;
+                numberDisplay.textContent = currentNum;
+                playClick();
+                
+                // Gradually slow down
+                if (counter < 50) {
+                    setTimeout(rollNumber, intervals[Math.min(intervalIndex, intervals.length - 1)]);
+                    if (counter % 6 === 0) intervalIndex++;
+                } else {
+                    // Final reveal
+                    setTimeout(() => {
+                        numberDisplay.style.transform = 'scale(1.2)';
+                        numberDisplay.textContent = finalNum;
+                        
+                        setTimeout(() => {
+                            numberDisplay.style.transform = 'scale(1)';
+                            
+                            // Find and display the result
+                            const table = tables[currentType];
+                            const match = table.find(entry => 
+                                finalNum >= entry.min && finalNum <= entry.max
+                            );
+                            
+                            if (match) {
+                                resultDisplay.innerHTML = `
+                                    <div class="result-title">Roll: ${finalNum}</div>
+                                    <div class="result-description">${match.description}</div>
+                                    <div class="result-effect">${match.effect}</div>
+                                `;
+                            } else {
+                                resultDisplay.innerHTML = '<div class="result-title">Result not found</div>';
+                            }
+                            
+                            // Re-enable button
+                            button.disabled = false;
+                            isGenerating = false;
+                        }, 300);
+                    }, 500);
+                }
+            }
+            
+            rollNumber();
+        }
+        
+        // Add smooth transitions
+        document.getElementById('numberDisplay').style.transition = 'transform 0.3s ease-out';
+    </script>
+</body>
+</html>
